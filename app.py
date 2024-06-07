@@ -1,98 +1,5 @@
-# # Main Code
-# from langchain_community.utilities import SerpAPIWrapper
-# from langchain.agents import load_tools
-# from dotenv import load_dotenv
-# import os
-# from key import cohere_api_key
-
-# # Load environment variables
-# load_dotenv()
-
-# from langchain.agents import AgentExecutor
-# from langchain_cohere.chat_models import ChatCohere
-# from langchain_cohere.react_multi_hop.agent import create_cohere_react_agent
-# from langchain_community.tools.tavily_search import TavilySearchResults
-# from langchain_core.prompts import ChatPromptTemplate
-# from langchain_core.messages import AIMessage, HumanMessage
-# from langchain.tools.retriever import create_retriever_tool
-
-# # RAGS
-# from langchain_community.document_loaders import Docx2txtLoader
-# from langchain_community.document_loaders import PyPDFLoader
-# from langchain.text_splitter import RecursiveCharacterTextSplitter
-# from langchain_cohere import CohereEmbeddings
-# from langchain_community.vectorstores import FAISS
-# from io import BytesIO 
-
-# # Create and run the Cohere agent
-# llm = ChatCohere()
-
-# # First RAG Agent:CV
-# def cv_rag_agent(uploaded_file):
-#     # Load and split text documents
-#     if uploaded_file.name.endswith(".docx"):
-#         file_data = uploaded_file.read()
-#         loader = Docx2txtLoader(BytesIO(file_data))
-#         data = loader.load()
-#     if uploaded_file.name.endswith(".pdf"):
-#         loader = PyPDFLoader(BytesIO(file_data))
-#         data = loader.load()
-#     return data
-
-#     # splitter = RecursiveCharacterTextSplitter(
-#     #     chunk_size=500,
-#     #     chunk_overlap=50
-#     # )
-#     # splits = splitter.split_documents(pages)
-#     # embeddings = CohereEmbeddings(cohere_api_key=cohere_api_key)
-#     # vector_store = FAISS.from_documents(splits, embeddings)
-#     # retrieval = vector_store.as_retriever(search_kwargs={'k': 3})
-
-#     # retreiver_tool = create_retriever_tool(
-#     #     retrieval,
-#     #     "search_the_scripture",
-#     #     "Use this tool when the context of a user's question is on chrsitianity."
-#     # )
-
-
-
-
-
-
-# # Streamlit Interface
-# import streamlit as st
-# st.set_page_config(page_title="Cover Letter Writter", page_icon='🧾')
-
-# with st.sidebar:
-#     st.header("References")
-#     st.text_input("Paste Job Post Url")
-#     uploaded_file = st.file_uploader("Upload CV File", type=['pdf', 'docx'])
-
-#     st.button('Generate Cover letter')
-
-# # Create a container for the card box
-# card_box = st.container()
-
-# with card_box:
-#     # Add a title for the card
-#     st.header("Cover Letter")
-#     if uploaded_file:
-#         content = cv_rag_agent(uploaded_file)
-#     # Add content to the card body
-#         st.write(content)
-
-#     # Add a button or link (optional)
-#     if st.button("Export"):
-#         # Perform an action when the button is clicked
-#         pass
-
 
 # main.py
-
-# main.py
-# main.py
-# main.py
-
 from langchain_community.utilities import SerpAPIWrapper
 from langchain.agents import load_tools
 from dotenv import load_dotenv
@@ -111,8 +18,7 @@ from langchain_core.messages import AIMessage, HumanMessage
 from langchain.tools.retriever import create_retriever_tool
 
 # RAGS
-from langchain_community.document_loaders import Docx2txtLoader
-from langchain_community.document_loaders import PyPDFLoader
+from langchain_community.document_loaders import Docx2txtLoader, PyPDFLoader, PyMuPDFLoader
 from langchain_community.document_loaders import UnstructuredURLLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
@@ -123,8 +29,11 @@ from io import BytesIO
 # Create and run the Cohere agent
 llm = ChatCohere()
 
-# First RAG Agent: CV
 def cv_rag_retriever(uploaded_file):
+    # Check if the uploaded_file is None
+    if uploaded_file is None:
+        raise ValueError("No file uploaded")
+
     # Read file data
     file_data = uploaded_file.read()
     file_name = uploaded_file.name
@@ -133,17 +42,25 @@ def cv_rag_retriever(uploaded_file):
     if file_name.endswith(".docx"):
         with open('temp.docx', 'wb') as temp_file:
             temp_file.write(file_data)
-        loader = Docx2txtLoader('temp.docx')
-        data = loader.load()
-        os.remove('temp.docx')
-        text = '\n'.join([page.page_content for page in data])
+        try:
+            loader = Docx2txtLoader('temp.docx')
+            data = loader.load()
+            os.remove('temp.docx')
+            text = '\n'.join([page.page_content for page in data])
+        except Exception as e:
+            os.remove('temp.docx')
+            raise ValueError(f"Error processing DOCX file: {e}")
     elif file_name.endswith(".pdf"):
         with open('temp.pdf', 'wb') as temp_file:
             temp_file.write(file_data)
-        loader = PyPDFLoader('temp.pdf')
-        data = loader.load()
-        os.remove('temp.pdf')
-        text = '\n'.join([page.page_content for page in data])
+        try:
+            loader = PyMuPDFLoader('temp.pdf')
+            data = loader.load()
+            os.remove('temp.pdf')
+            text = '\n'.join([page.page_content for page in data])
+        except Exception as e:
+            os.remove('temp.pdf')
+            raise ValueError(f"Error processing PDF file: {e}")
     else:
         raise ValueError("Unsupported file type")
     
@@ -162,8 +79,11 @@ def cv_rag_retriever(uploaded_file):
 
     return retriever
     
-# First RAG Agent: CV
-def job_description_rag_retriever(url):    
+def job_description_rag_retriever(url):
+    # Check if the URL is None
+    if not url:
+        raise ValueError("No URL provided")
+    
     web_loader = UnstructuredURLLoader(urls=[url])
     document = web_loader.load()
     splitter = RecursiveCharacterTextSplitter(
@@ -175,15 +95,9 @@ def job_description_rag_retriever(url):
     vector_store = FAISS.from_documents(splits, embeddings)
     retriever = vector_store.as_retriever(search_kwargs={'k': 3})
 
-    
     return retriever
 
-
-
-
-#==============================================================================
-
-def process(cv_retreiver_tool,job_description_retreiver_tool,cv_retriever,job_description_retriever):
+def process(cv_retreiver_tool, job_description_retreiver_tool, cv_retriever, job_description_retriever):
     # Updated prompt to include a context placeholder for the retrieved text
     prompt = ChatPromptTemplate.from_template("""
     You are professional cover letter writer. 
@@ -191,27 +105,24 @@ def process(cv_retreiver_tool,job_description_retreiver_tool,cv_retriever,job_de
     CV: {context1}
     Job Description: {context2}
     Question: {question}
-    Follow the template below when writing the cover letter based on my CV and Job's Description .
+    Follow the template below when writing the cover letter based on my CV and job's description.
     [Date]
     First Name Surname
     Hiring Manager's
-    Company name)
-    Street address]
-    (City/Town]. [Postcode]
-    [Phone]
-    [Emai]
-    RE:[Job Title]. [Reference Code]
+    Company name
+    Street address
+    City/Town, Postcode
+    Phone
+    Email
+    RE: [Job Title], [Reference Code]
     Dear Hiring manager,
-    I am writing to express my interest in the vacant [Job Tale] position at [Company Name] which was advertised on [Job Advertisement Source]
-    As a skilled [Your Profession] with [# years] of experience in [relevant job industry]. I believe my background and skills make me well-suited for this role
-    In my previous position as [Recent Job Title] at [Previous Company Name]. I had the opportunity to [describe a responsibility, task, or project you completed and what you achieved) This experience has [explain how this experience is relevant to the job post]
-    What excites me most about the prospect of working at [Company flame] is [mention something you admire about the company or how you relate to their values or mission] I believe my [specific skills] align perfectly with your company's goals, and I am confident that I could bring value to your team
-    Thank you for considering my application. I look forward to the possibility of discussing this exciting opportunity with you. I am readily available for an interview at your earliest
-    convenience
-    Yours sincerely
+    I am writing to express my interest in the vacant [Job Title] position at [Company Name] which was advertised on [Job Advertisement Source].
+    As a skilled [Your Profession] with [# years] of experience in [relevant job industry], I believe my background and skills make me well-suited for this role.
+    In my previous position as [Recent Job Title] at [Previous Company Name], I had the opportunity to [describe a responsibility, task, or project you completed and what you achieved]. This experience has [explain how this experience is relevant to the job post].
+    What excites me most about the prospect of working at [Company Name] is [mention something you admire about the company or how you relate to their values or mission]. I believe my [specific skills] align perfectly with your company's goals, and I am confident that I could bring value to your team.
+    Thank you for considering my application. I look forward to the possibility of discussing this exciting opportunity with you. I am readily available for an interview at your earliest convenience.
+    Yours sincerely,
     [Your Name]
-  
-    
     """)
 
     # Function to format retrieved documents
@@ -220,43 +131,34 @@ def process(cv_retreiver_tool,job_description_retreiver_tool,cv_retriever,job_de
 
     agent = create_cohere_react_agent(
         llm=llm,
-        tools=[cv_retreiver_tool,job_description_retreiver_tool],
+        tools=[cv_retreiver_tool, job_description_retreiver_tool],
         prompt=prompt,
     )
 
-    # chat_history = [
-    #     HumanMessage(content="My name is Sunday?"),
-    #     AIMessage(content="Hi Sunday, Nice to meet you!"),
-    # ]
-
-    agent_executor = AgentExecutor(agent=agent, tools=[cv_retreiver_tool,job_description_retreiver_tool], verbose=True)
-
+    agent_executor = AgentExecutor(agent=agent, tools=[cv_retreiver_tool, job_description_retreiver_tool], verbose=True)
 
     user_input = "Generate a cover letter using provided CV and job description"
 
     # Retrieve documents related to the query
-
     retrieved_cv = cv_retriever.get_relevant_documents(user_input)
     formatted_cv = format_docs(retrieved_cv)
 
     retrieved_job_description = job_description_retriever.get_relevant_documents(user_input)
     formatted_job_description = format_docs(retrieved_job_description)
 
-    response = agent_executor.invoke({
+    response1 = agent_executor.invoke({
         "question": user_input,
         "context1": formatted_cv,  # Add the retrieved context here
         "context2": formatted_job_description  # Add the retrieved context here
     })
-        
-        
-    # chat_history.append(HumanMessage(content=user_input))
-    # chat_history.append(AIMessage(content=response['output']))
+    response2 = agent_executor.stream({
+        "question": user_input,
+        "context1": formatted_cv,  # Add the retrieved context here
+        "context2": formatted_job_description  # Add the retrieved context here
+    })
     
-    # See Cohere's response
-    return response.get("output")
-
-#==============================================================================
-
+    
+    return response1.get("output"), response2
 
 # Streamlit Interface
 import streamlit as st
@@ -268,22 +170,49 @@ with st.sidebar:
     uploaded_file = st.file_uploader("Upload CV File", type=['pdf', 'docx'])
 
     if st.button('Generate Cover letter'):
-        try:
-            st.write('chain here')
-        except ValueError as e:
-            st.error(str(e))
+        if uploaded_file and job_url:
+            try:
+                cv_retriever = cv_rag_retriever(uploaded_file)
+                job_description_retriever = job_description_rag_retriever(job_url)
 
-# Create a container for the card box
-card_box = st.container()
+                # First RAG Tool: CV
+                cv_retreiver_tool = create_retriever_tool(
+                        cv_retriever,
+                        "cv_tool",
+                        "Use this tool to see my CV."
+                    )
 
-with card_box:
-    # Add a title for the card
+                # Second RAG Tool: Job Description
+                job_description_retreiver_tool = create_retriever_tool(
+                        job_description_retriever,
+                        "job_description_tool",
+                        "Use this tool to see the job description."
+                    )
+                result1,result2 = process(cv_retreiver_tool, job_description_retreiver_tool, cv_retriever, job_description_retriever)
+                st.session_state.result1 = result1
+                st.session_state.result2 = result2
+            except ValueError as e:
+                st.error(str(e))
+        else:
+            st.error("Please provide both a job post URL and a CV file.")
+
+
+
+# Create columns for layout
+col1, col2 = st.columns([3, 1])
+
+with col1:
     st.header("Cover Letter")
-    if 'result' in st.session_state:
-        st.write('hi')
-        st.write(st.session_state.result)
+    if 'result1' in st.session_state:
+        result = st.write(st.session_state.result1)
 
-    # Add a button or link (optional)
-    if st.button("Export"):
-        # Perform an action when the button is clicked
-        pass
+with col2:
+    st.header("Verbose Logs")
+    if 'result2' in st.session_state:
+        result2 = st.write_stream(st.session_state.result2)
+    
+        st.text_area("Verbose Output", result2,
+                      height=200)
+
+if st.button("Export"):
+    pass
