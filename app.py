@@ -181,6 +181,82 @@ def job_description_rag_retriever(url):
 
 
 
+#==============================================================================
+
+def process(cv_retreiver_tool,job_description_retreiver_tool,cv_retriever,job_description_retriever):
+    # Updated prompt to include a context placeholder for the retrieved text
+    prompt = ChatPromptTemplate.from_template("""
+    You are professional cover letter writer. 
+    You must use my CV and Job Description to generate a cover letter: 
+    CV: {context1}
+    Job Description: {context2}
+    Question: {question}
+    Follow the template below when writing the cover letter based on my CV and Job's Description .
+    [Date]
+    First Name Surname
+    Hiring Manager's
+    Company name)
+    Street address]
+    (City/Town]. [Postcode]
+    [Phone]
+    [Emai]
+    RE:[Job Title]. [Reference Code]
+    Dear Hiring manager,
+    I am writing to express my interest in the vacant [Job Tale] position at [Company Name] which was advertised on [Job Advertisement Source]
+    As a skilled [Your Profession] with [# years] of experience in [relevant job industry]. I believe my background and skills make me well-suited for this role
+    In my previous position as [Recent Job Title] at [Previous Company Name]. I had the opportunity to [describe a responsibility, task, or project you completed and what you achieved) This experience has [explain how this experience is relevant to the job post]
+    What excites me most about the prospect of working at [Company flame] is [mention something you admire about the company or how you relate to their values or mission] I believe my [specific skills] align perfectly with your company's goals, and I am confident that I could bring value to your team
+    Thank you for considering my application. I look forward to the possibility of discussing this exciting opportunity with you. I am readily available for an interview at your earliest
+    convenience
+    Yours sincerely
+    [Your Name]
+  
+    
+    """)
+
+    # Function to format retrieved documents
+    def format_docs(docs):
+        return "\n\n".join(doc.page_content for doc in docs)
+
+    agent = create_cohere_react_agent(
+        llm=llm,
+        tools=[cv_retreiver_tool,job_description_retreiver_tool],
+        prompt=prompt,
+    )
+
+    # chat_history = [
+    #     HumanMessage(content="My name is Sunday?"),
+    #     AIMessage(content="Hi Sunday, Nice to meet you!"),
+    # ]
+
+    agent_executor = AgentExecutor(agent=agent, tools=[cv_retreiver_tool,job_description_retreiver_tool], verbose=True)
+
+
+    user_input = "Generate a cover letter using provided CV and job description"
+
+    # Retrieve documents related to the query
+
+    retrieved_cv = cv_retriever.get_relevant_documents(user_input)
+    formatted_cv = format_docs(retrieved_cv)
+
+    retrieved_job_description = job_description_retriever.get_relevant_documents(user_input)
+    formatted_job_description = format_docs(retrieved_job_description)
+
+    response = agent_executor.invoke({
+        "question": user_input,
+        "context1": formatted_cv,  # Add the retrieved context here
+        "context2": formatted_job_description  # Add the retrieved context here
+    })
+        
+        
+    # chat_history.append(HumanMessage(content=user_input))
+    # chat_history.append(AIMessage(content=response['output']))
+    
+    # See Cohere's response
+    return response.get("output")
+
+#==============================================================================
+
 
 # Streamlit Interface
 import streamlit as st
@@ -193,7 +269,7 @@ with st.sidebar:
 
     if st.button('Generate Cover letter'):
         try:
-           st.write('hi')
+            st.write('chain here')
         except ValueError as e:
             st.error(str(e))
 
@@ -205,6 +281,7 @@ with card_box:
     st.header("Cover Letter")
     if 'result' in st.session_state:
         st.write('hi')
+        st.write(st.session_state.result)
 
     # Add a button or link (optional)
     if st.button("Export"):
