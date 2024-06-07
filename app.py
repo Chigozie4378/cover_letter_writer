@@ -113,6 +113,7 @@ from langchain.tools.retriever import create_retriever_tool
 # RAGS
 from langchain_community.document_loaders import Docx2txtLoader
 from langchain_community.document_loaders import PyPDFLoader
+from langchain_community.document_loaders import UnstructuredURLLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
 from langchain_cohere import CohereEmbeddings
@@ -123,7 +124,7 @@ from io import BytesIO
 llm = ChatCohere()
 
 # First RAG Agent: CV
-def cv_rag_tool(uploaded_file):
+def cv_rag_retriever(uploaded_file):
     # Read file data
     file_data = uploaded_file.read()
     file_name = uploaded_file.name
@@ -157,15 +158,29 @@ def cv_rag_tool(uploaded_file):
     splits = splitter.split_documents([document])
     embeddings = CohereEmbeddings(cohere_api_key=cohere_api_key)
     vector_store = FAISS.from_documents(splits, embeddings)
-    retrieval = vector_store.as_retriever(search_kwargs={'k': 3})
+    retriever = vector_store.as_retriever(search_kwargs={'k': 3})
 
-    retreiver_tool = create_retriever_tool(
-        retrieval,
-        "cv_tool",
-        "Use this tool to see my CV."
-    )
-    return retreiver_tool
+    return retriever
     
+# First RAG Agent: CV
+def job_description_rag_retriever(url):    
+    web_loader = UnstructuredURLLoader(urls=[url])
+    document = web_loader.load()
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=1000,
+        chunk_overlap=100
+    )
+    splits = splitter.split_documents(document)
+    embeddings = CohereEmbeddings(cohere_api_key=cohere_api_key)
+    vector_store = FAISS.from_documents(splits, embeddings)
+    retriever = vector_store.as_retriever(search_kwargs={'k': 3})
+
+    
+    return retriever
+
+
+
+
 
 # Streamlit Interface
 import streamlit as st
@@ -176,10 +191,9 @@ with st.sidebar:
     job_url = st.text_input("Paste Job Post Url")
     uploaded_file = st.file_uploader("Upload CV File", type=['pdf', 'docx'])
 
-    if st.button('Generate Cover letter') and uploaded_file:
+    if st.button('Generate Cover letter'):
         try:
-            content = cv_rag_tool(uploaded_file)
-            st.write(content)
+           st.write('hi')
         except ValueError as e:
             st.error(str(e))
 
@@ -189,13 +203,8 @@ card_box = st.container()
 with card_box:
     # Add a title for the card
     st.header("Cover Letter")
-    if uploaded_file:
-        try:
-            content = cv_rag_tool(uploaded_file)
-            # Add content to the card body
-            st.write(content)
-        except ValueError as e:
-            st.error(str(e))
+    if 'result' in st.session_state:
+        st.write('hi')
 
     # Add a button or link (optional)
     if st.button("Export"):
