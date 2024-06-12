@@ -1,4 +1,2 @@
-openai_api_key = 'sk-proj-WX2UsA6uWg13GtHRgVnIT3BlbkFJEVN7MZ0Y0jDBngXks3Um'
-huggingface_api_key = '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'
+
 cohere_api_key = 'sNGl1XmI2YQltapu8EqsNx3JhHHE5vnBbKoKY1H8'
-serp_api_key = 'daf81235f5ce0b5109d241d06cef60b833c6634c7239171bcc1098a2aa9010a1'
