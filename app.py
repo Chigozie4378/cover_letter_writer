@@ -73,7 +73,7 @@ def cv_rag_retriever(uploaded_file):
         chunk_overlap=50
     )
     splits = splitter.split_documents([document])
-    embeddings = CohereEmbeddings(cohere_api_key=cohere_api_key)
+    embeddings = CohereEmbeddings(cohere_api_key="sNGl1XmI2YQltapu8EqsNx3JhHHE5vnBbKoKY1H8")
     vector_store = FAISS.from_documents(splits, embeddings)
     retriever = vector_store.as_retriever(search_kwargs={'k': 3})
 
@@ -91,7 +91,7 @@ def job_description_rag_retriever(url):
         chunk_overlap=100
     )
     splits = splitter.split_documents(document)
-    embeddings = CohereEmbeddings(cohere_api_key=cohere_api_key)
+    embeddings = CohereEmbeddings(cohere_api_key="sNGl1XmI2YQltapu8EqsNx3JhHHE5vnBbKoKY1H8")
     vector_store = FAISS.from_documents(splits, embeddings)
     retriever = vector_store.as_retriever(search_kwargs={'k': 3})
 
